@@ -31,10 +31,7 @@
 #define TIME_SEND           100         // [ms] Sending time interval
 #define SPEED_MAX_TEST      300         // [-] Maximum speed for testing
 #define SPEED_STEP          20          // [-] Speed step
-#define DEBUG_RX                        // [-] Debug received data. Prints all bytes to serial (comment-out to disable)
-
-#include <SoftwareSerial.h>
-SoftwareSerial HoverSerial(2,3);        // RX, TX
+//#define DEBUG_RX                        // [-] Debug received data. Prints all bytes to serial (comment-out to disable)
 
 // Global variables
 uint8_t idx = 0;                        // Index for new data pointer
@@ -71,7 +68,7 @@ void setup()
   Serial.begin(SERIAL_BAUD);
   Serial.println("Hoverboard Serial v1.0");
 
-  HoverSerial.begin(HOVER_SERIAL_BAUD);
+  //HoverSerial.begin(HOVER_SERIAL_BAUD);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
@@ -85,15 +82,15 @@ void Send(int16_t uSteer, int16_t uSpeed)
   Command.checksum = (uint16_t)(Command.start ^ Command.steer ^ Command.speed);
 
   // Write to Serial
-  HoverSerial.write((uint8_t *) &Command, sizeof(Command)); 
+  Serial.write((uint8_t *) &Command, sizeof(Command)); 
 }
 
 // ########################## RECEIVE ##########################
 void Receive()
 {
     // Check for new data availability in the Serial buffer
-    if (HoverSerial.available()) {
-        incomingByte 	  = HoverSerial.read();                                   // Read the incoming byte
+    if (Serial.available()) {
+        incomingByte 	  = Serial.read();                                   // Read the incoming byte
         bufStartFrame	= ((uint16_t)(incomingByte) << 8) | incomingBytePrev;       // Construct the start frame
     }
     else {
@@ -102,8 +99,8 @@ void Receive()
 
   // If DEBUG_RX is defined print all incoming bytes
   #ifdef DEBUG_RX
-        Serial.print(1);
-        Serial.print(incomingByte);
+        //Serial.print(1);
+        //Serial.print(incomingByte);
         return;
     #endif
 
@@ -149,31 +146,16 @@ void Receive()
 
 // ########################## LOOP ##########################
 
-unsigned long iTimeSend = 0;
-int iTest = 0;
-int iStep = SPEED_STEP;
 
 void loop(void)
 { 
-  unsigned long timeNow = millis();
-
   // Check for new received data
   Receive();
 
-  // Send commands
-  if (iTimeSend > timeNow) return;
-  iTimeSend = timeNow + TIME_SEND;
-  Send(0, iTest);
-
-  // Calculate test command signal
-  iTest += iStep;
-
-  // invert step if reaching limit
-  if (iTest >= SPEED_MAX_TEST || iTest <= -SPEED_MAX_TEST)
-    iStep = -iStep;
-
+  Send(0, 300);
   // Blink the LED
-  digitalWrite(LED_BUILTIN, (timeNow%2000)<1000);
+  delay(50);
 }
+
 
 // ########################## END ##########################
