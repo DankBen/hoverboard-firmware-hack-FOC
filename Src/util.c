@@ -780,7 +780,7 @@ void calcInputCmd(InputStruct *in, int16_t out_min, int16_t out_max) {
       }
       break;
     default: // Input is ignored
-      in->cmd = 0;
+      in->cmd = 150;
       break;
   }
 }
