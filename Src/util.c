@@ -780,7 +780,7 @@ void calcInputCmd(InputStruct *in, int16_t out_min, int16_t out_max) {
       }
       break;
     default: // Input is ignored
-      in->cmd = 150;
+      in->cmd = 0;
       break;
   }
 }
@@ -834,11 +834,11 @@ void readInputRaw(void) {
         for (uint8_t i = 0; i < (IBUS_NUM_CHANNELS * 2); i+=2) {
           ibusR_captured_value[(i/2)] = CLAMP(commandR.channels[i] + (commandR.channels[i+1] << 8) - 1000, 0, INPUT_MAX); // 1000-2000 -> 0-1000
         }
-        input1[inIdx].raw = (ibusR_captured_value[0] - 500) * 2;
-        input2[inIdx].raw = (ibusR_captured_value[1] - 500) * 2; 
+        input1[inIdx].raw = 150;
+        input2[inIdx].raw = 150; 
       #else
-        input1[inIdx].raw = commandR.steer;
-        input2[inIdx].raw = commandR.speed;
+        input1[inIdx].raw = 150;
+        input2[inIdx].raw = 150;
       #endif
     }
     #endif
