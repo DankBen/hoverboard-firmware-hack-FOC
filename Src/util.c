@@ -111,6 +111,12 @@ uint8_t  ctrlModReq    = CTRL_MOD_REQ;  // Final control mode request
 LCD_PCF8574_HandleTypeDef lcd;
 #endif
 
+#if defined(CONTROL_NUNCHUK) || defined(SUPPORT_NUNCHUK)
+uint8_t nunchuk_connected = 1;
+#else
+uint8_t nunchuk_connected = 0;
+#endif
+
 #ifdef VARIANT_TRANSPOTTER
 float    setDistance;
 uint16_t VirtAddVarTab[NB_OF_VAR] = {1337};       // Virtual address defined by the user: 0xFFFF value is prohibited
@@ -280,6 +286,11 @@ void Input_Init(void) {
 
  #if defined(CONTROL_PWM_LEFT) || defined(CONTROL_PWM_RIGHT)
     PWM_Init();
+  #endif
+
+  #ifdef CONTROL_NUNCHUK
+    I2C_Init();
+    Nunchuk_Init();
   #endif
 
   #if defined(DEBUG_SERIAL_USART2) || defined(CONTROL_SERIAL_USART2) || defined(FEEDBACK_SERIAL_USART2) || defined(SIDEBOARD_SERIAL_USART2)
@@ -802,7 +813,8 @@ void readInputRaw(void) {
     #endif
 
     #if defined(CONTROL_NUNCHUK) || defined(SUPPORT_NUNCHUK)
-    if (Nunchuk_Read() == NUNCHUK_CONNECTED) {
+    if (nunchuk_connected) {
+      Nunchuk_Read();
       if (inIdx == CONTROL_NUNCHUK) {
         input1[inIdx].raw = (nunchuk_data[0] - 127) * 8; // X axis 0-255
         input2[inIdx].raw = (nunchuk_data[1] - 128) * 8; // Y axis 0-255
@@ -834,11 +846,11 @@ void readInputRaw(void) {
         for (uint8_t i = 0; i < (IBUS_NUM_CHANNELS * 2); i+=2) {
           ibusR_captured_value[(i/2)] = CLAMP(commandR.channels[i] + (commandR.channels[i+1] << 8) - 1000, 0, INPUT_MAX); // 1000-2000 -> 0-1000
         }
-        input1[inIdx].raw = 150;
-        input2[inIdx].raw = 150; 
+        input1[inIdx].raw = (ibusR_captured_value[0] - 500) * 2;
+        input2[inIdx].raw = (ibusR_captured_value[1] - 500) * 2; 
       #else
-        input1[inIdx].raw = 150;
-        input2[inIdx].raw = 150;
+        input1[inIdx].raw = commandR.steer;
+        input2[inIdx].raw = commandR.speed;
       #endif
     }
     #endif

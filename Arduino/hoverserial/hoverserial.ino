@@ -11,8 +11,6 @@
 //   it is recommended to use the built-in Serial interface for full speed perfomace.
 // • The data packaging includes a Start Frame, checksum, and re-syncronization capability for reliable communication
 // 
-// The code starts with zero speed and moves towards +
-//
 // CONFIGURATION on the hoverboard side in config.h:
 // • Option 1: Serial on Right Sensor cable (short wired cable) - recommended, since the USART3 pins are 5V tolerant.
 //   #define CONTROL_SERIAL_USART3
@@ -25,13 +23,15 @@
 // *******************************************************************
 
 // ########################## DEFINES ##########################
-#define HOVER_SERIAL_BAUD   19200      // [-] Baud rate for HoverSerial (used to communicate with the hoverboard)
-#define SERIAL_BAUD         19200      // [-] Baud rate for built-in Serial (used for the Serial Monitor)
+#define HOVER_SERIAL_BAUD   115200      // [-] Baud rate for HoverSerial (used to communicate with the hoverboard)
+#define SERIAL_BAUD         115200      // [-] Baud rate for built-in Serial (used for the Serial Monitor)
 #define START_FRAME         0xABCD     	// [-] Start frme definition for reliable serial communication
 #define TIME_SEND           100         // [ms] Sending time interval
 #define SPEED_MAX_TEST      300         // [-] Maximum speed for testing
-#define SPEED_STEP          20          // [-] Speed step
-//#define DEBUG_RX                        // [-] Debug received data. Prints all bytes to serial (comment-out to disable)
+// #define DEBUG_RX                        // [-] Debug received data. Prints all bytes to serial (comment-out to disable)
+
+#include <SoftwareSerial.h>
+SoftwareSerial HoverSerial(2,3);        // RX, TX
 
 // Global variables
 uint8_t idx = 0;                        // Index for new data pointer
@@ -68,7 +68,7 @@ void setup()
   Serial.begin(SERIAL_BAUD);
   Serial.println("Hoverboard Serial v1.0");
 
-  //HoverSerial.begin(HOVER_SERIAL_BAUD);
+  HoverSerial.begin(HOVER_SERIAL_BAUD);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
@@ -82,15 +82,15 @@ void Send(int16_t uSteer, int16_t uSpeed)
   Command.checksum = (uint16_t)(Command.start ^ Command.steer ^ Command.speed);
 
   // Write to Serial
-  Serial.write((uint8_t *) &Command, sizeof(Command)); 
+  HoverSerial.write((uint8_t *) &Command, sizeof(Command)); 
 }
 
 // ########################## RECEIVE ##########################
 void Receive()
 {
     // Check for new data availability in the Serial buffer
-    if (Serial.available()) {
-        incomingByte 	  = Serial.read();                                   // Read the incoming byte
+    if (HoverSerial.available()) {
+        incomingByte 	  = HoverSerial.read();                                   // Read the incoming byte
         bufStartFrame	= ((uint16_t)(incomingByte) << 8) | incomingBytePrev;       // Construct the start frame
     }
     else {
@@ -99,8 +99,7 @@ void Receive()
 
   // If DEBUG_RX is defined print all incoming bytes
   #ifdef DEBUG_RX
-        //Serial.print(1);
-        //Serial.print(incomingByte);
+        Serial.print(incomingByte);
         return;
     #endif
 
@@ -146,16 +145,28 @@ void Receive()
 
 // ########################## LOOP ##########################
 
+unsigned long iTimeSend = 0;
+int iTestMax = SPEED_MAX_TEST;
+int iTest = 0;
 
 void loop(void)
 { 
+  unsigned long timeNow = millis();
+
   // Check for new received data
   Receive();
 
-  Send(0, 300);
-  // Blink the LED
-  delay(50);
-}
+  // Send commands
+  if (iTimeSend > timeNow) return;
+  iTimeSend = timeNow + TIME_SEND;
+  Send(0, SPEED_MAX_TEST - 2*abs(iTest));
 
+  // Calculate test command signal
+  iTest += 10;
+  if (iTest > iTestMax) iTest = -iTestMax;
+
+  // Blink the LED
+  digitalWrite(LED_BUILTIN, (timeNow%2000)<1000);
+}
 
 // ########################## END ##########################
